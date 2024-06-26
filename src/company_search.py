@@ -8,6 +8,136 @@ from typing import Tuple, Optional
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
+class PrefixTree:
+    def __init__(self):
+        self.root = {}
+
+    def add_sequence(self, sequence):
+        node = self.root
+        for word in sequence.lower().split():
+            if word not in node:
+                node[word] = {}
+            node = node[word]
+        node[None] = None  # маркер конца последовательности
+
+    def find_longest_prefix(self, text, allow_partial=False, min_similarity=0.5):
+        words = text.lower().split()
+        node = self.root
+        matched_prefix_length = 0
+        matched_prefix_node = None
+        total_similarity = 1.0
+        find_prefix = ''
+
+        for i, word in enumerate(words):
+            if word in node:
+                node = node[word]
+                find_prefix = find_prefix + " " + word
+                if None in node:  # найден конец последовательности
+                    matched_prefix_length = i + 1
+                    matched_prefix_node = node
+            else:
+                if allow_partial:
+                    best_match = None
+                    best_similarity = 0
+                    for child_word in node.keys():
+                        if child_word is not None:
+                            similarity = normalized_levenshtein_similarity(word, child_word)
+                            if similarity > best_similarity:
+                                best_similarity = similarity
+                                best_match = child_word
+                    if best_similarity >= min_similarity:
+                        node = node[best_match]
+                        find_prefix = find_prefix + " " + best_match
+                        total_similarity *= best_similarity
+                        if None in node:  # найден конец последовательности
+                            matched_prefix_length = i + 1
+                            matched_prefix_node = node
+                    else:
+                        break
+                else:
+                    break
+
+        if matched_prefix_node and None in matched_prefix_node:
+            remaining_text = ' '.join(words[matched_prefix_length:])
+            matched_prefix = ' '.join(words[:matched_prefix_length])
+            return matched_prefix, remaining_text, total_similarity, find_prefix.strip()
+        else:
+            return None, text, 0.0, None  # не найдено совпадение
+
+    def print_tree(self, depth=3):
+        self._print_node(self.root, depth, 0)
+
+    def _print_node(self, node, max_depth, current_depth):
+        if current_depth > max_depth:
+            return
+        for word, child in node.items():
+            if word is None:
+                print(' ' * current_depth * 4 + '<END>')
+            else:
+                print(' ' * current_depth * 4 + word)
+                self._print_node(child, max_depth, current_depth + 1)
+
+class TrieNode:
+    def __init__(self):
+        self.children = {}
+        self.is_end_of_word = False
+
+class Trie:
+    def __init__(self):
+        self.root = TrieNode()
+
+    def add_sequence(self, sequence):
+        node = self.root
+        for char in sequence:
+            if char not in node.children:
+                node.children[char] = TrieNode()
+            node = node.children[char]
+        node.is_end_of_word = True
+
+    def search(self, word, max_errors, trace=False):
+        current_row = range(len(word) + 1)
+        best_match = (None, float('inf'))
+
+        if trace:
+            print(f"Searching for '{word}' with max_errors={max_errors}")
+
+        for char in self.root.children:
+            best_match = self._search_recursive(self.root.children[char], char, word, current_row, best_match, max_errors, char, trace)
+
+        return best_match
+
+    def _search_recursive(self, node, char, word, previous_row, best_match, max_errors, current_prefix, trace):
+        columns = len(word) + 1
+        current_row = [previous_row[0] + 1]
+
+        for column in range(1, columns):
+            insert_cost = current_row[column - 1] + 1
+            delete_cost = previous_row[column] + 1
+
+            if word[column - 1] != char:
+                replace_cost = previous_row[column - 1] + 1
+            else:
+                replace_cost = previous_row[column - 1]
+
+            current_row.append(min(insert_cost, delete_cost, replace_cost))
+
+        if trace:
+            print(f"Prefix '{current_prefix}': current_row={current_row}, previous_row={previous_row}")
+
+        if current_row[-1] <= max_errors and node.is_end_of_word:
+            if current_row[-1] < best_match[1]:
+                best_match = (current_prefix, current_row[-1])
+                if trace:
+                    print(f"New best match: {best_match}")
+
+        if min(current_row) <= max_errors:
+            for next_char in node.children:
+                best_match = self._search_recursive(
+                    node.children[next_char], next_char, word, current_row, best_match, max_errors, current_prefix + next_char, trace
+                )
+
+        return best_match
+
 def load_data(opf_file_path: str, companies_file_path: str) -> Tuple[pd.DataFrame, pd.DataFrame]:
     logging.info("Loading data...")
     opf_data = pd.read_csv(opf_file_path)

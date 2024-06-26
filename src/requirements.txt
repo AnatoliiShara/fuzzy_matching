@@ -25,6 +25,7 @@ language-selector==0.1
 launchpadlib==1.10.16
 lazr.restfulclient==0.14.4
 lazr.uri==1.0.6
+Levenshtein==0.25.1
 lockfile==0.12.2
 louis==3.20.0
 macaroonbakery==1.3.1
@@ -56,6 +57,7 @@ python-debian==0.1.43+ubuntu1.1
 pytz==2022.1
 pyxdg==0.27
 PyYAML==5.4.1
+rapidfuzz==3.9.3
 reportlab==3.6.8
 requests==2.25.1
 SecretStorage==3.3.1
