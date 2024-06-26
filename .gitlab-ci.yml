@@ -26,7 +26,7 @@ deploy:
   stage: deploy
   image: $DOCKER_IMAGE
   script:
-    - python src/your_script_name.py
+    - python src/company_search.py
   artifacts:
     paths:
       - output/
