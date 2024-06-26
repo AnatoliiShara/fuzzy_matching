@@ -1,0 +1,33 @@
+stages:
+  - build
+  - test
+  - deploy
+
+variables:
+  DOCKER_IMAGE: $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA
+
+build:
+  stage: build
+  image: docker:20.10.16
+  services:
+    - docker:20.10.16-dind
+  script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker build -t $DOCKER_IMAGE .
+    - docker push $DOCKER_IMAGE
+
+test:
+  stage: test
+  image: $DOCKER_IMAGE
+  script:
+    - python -m unittest discover tests
+
+deploy:
+  stage: deploy
+  image: $DOCKER_IMAGE
+  script:
+    - python src/your_script_name.py
+  artifacts:
+    paths:
+      - output/
+    expire_in: 1 month
