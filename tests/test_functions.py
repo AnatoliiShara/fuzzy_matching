@@ -1,9 +1,8 @@
 import unittest
 from src.company_search import (
     prepare_name, normalize_name, find_company, 
-    load_data, prepare_prefix_tree, prepare_company_trees
+    load_data, build_trees, PrefixTree, Trie
 )
-from src.company_search import PrefixTree, Trie 
 import pandas as pd
 
 class TestCompanyFunctions(unittest.TestCase):
@@ -11,8 +10,7 @@ class TestCompanyFunctions(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.opf_data, cls.companies_data = load_data('./data/companies_prefix_opf.csv', './data/edr_ua_short.csv')
-        cls.prefix_tree = prepare_prefix_tree(cls.opf_data)
-        cls.companies_tree, cls.companies_similar_tree = prepare_company_trees(cls.companies_data)
+        cls.prefix_tree, cls.companies_tree, cls.companies_similar_tree = build_trees(cls.opf_data, cls.companies_data)
 
     def test_prepare_name(self):
         self.assertEqual(prepare_name('ААА ВІП ТРЕВЕЛ'), 'ааа віп тревел')
@@ -47,14 +45,14 @@ class TestCompanyFunctions(unittest.TestCase):
         self.assertGreater(len(companies_data), 0)
 
     def test_prepare_prefix_tree(self):
-        prefix_tree = prepare_prefix_tree(self.opf_data)
+        prefix_tree, _, _ = build_trees(self.opf_data, self.companies_data)
         self.assertIsInstance(prefix_tree, PrefixTree)
         # Test a known prefix
         result = prefix_tree.find_longest_prefix("товариство з обмеженою відповідальністю")
         self.assertIsNotNone(result[0])
 
     def test_prepare_company_trees(self):
-        companies_tree, companies_similar_tree = prepare_company_trees(self.companies_data)
+        _, companies_tree, companies_similar_tree = build_trees(self.opf_data, self.companies_data)
         self.assertIsInstance(companies_tree, PrefixTree)
         self.assertIsInstance(companies_similar_tree, Trie)
 
